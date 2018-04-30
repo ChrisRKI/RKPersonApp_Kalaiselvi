@@ -1,40 +1,41 @@
-﻿using Autofac;
-using Autofac.Integration.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿using System;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
+using log4net;
+using PersonApplication.AutofacWeb;
 
 namespace PersonApplication
 {
     public class MvcApplication : System.Web.HttpApplication
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(MvcApplication));
         protected void Application_Start()
         {
+            AutofacConfig.ConfigureContainer();
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
-
-            ConfigureIOC();
+            log4net.Config.XmlConfigurator.Configure();
+            log.Info("Starting the application...");
+            
+          
         }
 
-        private void ConfigureIOC()
+        protected void Application_Error(object sender, EventArgs e)
         {
-            var builder = new ContainerBuilder();
-            builder.RegisterControllers(typeof(MvcApplication).Assembly);
-            builder.RegisterModelBinders(typeof(MvcApplication).Assembly);
-            builder.RegisterModelBinderProvider();
-            builder.RegisterModule<AutofacWebTypesModule>();
-            builder.RegisterSource(new ViewRegistrationSource());
+            Exception exception = Server.GetLastError();
 
-            builder.RegisterFilterProvider();
+            if (exception != null)
+            {
+                log.Error("Application Unhandled Error in Global Exception", Server.GetLastError());
+                Server.ClearError();
+                Response.Redirect("Error");
+            }
 
-            var container = builder.Build();
-            DependencyResolver.SetResolver(new AutofacDependencyResolver(container));
         }
+
+       
     }
 }
